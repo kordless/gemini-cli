@@ -18,6 +18,7 @@ import { useCompletion } from '../hooks/useCompletion.js';
 import { useKeypress, Key } from '../hooks/useKeypress.js';
 import { CommandContext, SlashCommand } from '../commands/types.js';
 import { Config } from '@google/gemini-cli-core';
+import { usePasteHandler } from '../hooks/usePasteHandler.js';
 import {
   clipboardHasImage,
   saveClipboardImage,
@@ -70,6 +71,13 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
 
   const resetCompletionState = completion.resetCompletionState;
   const shellHistory = useShellHistory(config.getProjectRoot());
+
+  usePasteHandler({
+    onPaste: (pastedText) => {
+      buffer.insert(pastedText, { paste: true });
+    },
+    isActive: focus,
+  });
 
   const handleSubmitAndClear = useCallback(
     (submittedValue: string) => {
