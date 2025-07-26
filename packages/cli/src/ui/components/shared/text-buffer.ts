@@ -1626,6 +1626,11 @@ export function useTextBuffer({
     }): void => {
       const { sequence: input } = key;
 
+      if (key.paste) {
+        insert(input, { paste: true });
+        return;
+      }
+
       if (
         key.name === 'return' ||
         input === '\r' ||

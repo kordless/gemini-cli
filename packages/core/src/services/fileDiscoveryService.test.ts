@@ -4,11 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { FileDiscoveryService } from './fileDiscoveryService.js';
+import { isGitRepository } from '../utils/gitUtils.js';
+
+vi.mock('../utils/gitUtils.js');
 
 describe('FileDiscoveryService', () => {
   let testRootDir: string;
@@ -27,6 +30,7 @@ describe('FileDiscoveryService', () => {
     );
     projectRoot = path.join(testRootDir, 'project');
     await fs.mkdir(projectRoot, { recursive: true });
+    vi.mocked(isGitRepository).mockClear();
   });
 
   afterEach(async () => {
@@ -35,7 +39,7 @@ describe('FileDiscoveryService', () => {
 
   describe('initialization', () => {
     it('should initialize git ignore parser by default in a git repo', async () => {
-      await fs.mkdir(path.join(projectRoot, '.git'));
+      vi.mocked(isGitRepository).mockReturnValue(true);
       await createTestFile('.gitignore', 'node_modules/');
 
       const service = new FileDiscoveryService(projectRoot);
@@ -45,6 +49,7 @@ describe('FileDiscoveryService', () => {
     });
 
     it('should not load git repo patterns when not in a git repo', async () => {
+      vi.mocked(isGitRepository).mockReturnValue(false);
       // No .git directory
       await createTestFile('.gitignore', 'node_modules/');
       const service = new FileDiscoveryService(projectRoot);
@@ -54,6 +59,7 @@ describe('FileDiscoveryService', () => {
     });
 
     it('should load .geminiignore patterns even when not in a git repo', async () => {
+      vi.mocked(isGitRepository).mockReturnValue(false);
       await createTestFile('.geminiignore', 'secrets.txt');
       const service = new FileDiscoveryService(projectRoot);
 
@@ -64,7 +70,7 @@ describe('FileDiscoveryService', () => {
 
   describe('filterFiles', () => {
     beforeEach(async () => {
-      await fs.mkdir(path.join(projectRoot, '.git'));
+      vi.mocked(isGitRepository).mockReturnValue(true);
       await createTestFile('.gitignore', 'node_modules/\n.git/\ndist');
       await createTestFile('.geminiignore', 'logs/');
     });
@@ -138,7 +144,7 @@ describe('FileDiscoveryService', () => {
 
   describe('shouldGitIgnoreFile & shouldGeminiIgnoreFile', () => {
     beforeEach(async () => {
-      await fs.mkdir(path.join(projectRoot, '.git'));
+      vi.mocked(isGitRepository).mockReturnValue(true);
       await createTestFile('.gitignore', 'node_modules/');
       await createTestFile('.geminiignore', '*.log');
     });
@@ -180,7 +186,7 @@ describe('FileDiscoveryService', () => {
 
   describe('edge cases', () => {
     it('should handle relative project root paths', async () => {
-      await fs.mkdir(path.join(projectRoot, '.git'));
+      vi.mocked(isGitRepository).mockReturnValue(true);
       await createTestFile('.gitignore', 'ignored.txt');
       const service = new FileDiscoveryService(
         path.relative(process.cwd(), projectRoot),
@@ -195,7 +201,7 @@ describe('FileDiscoveryService', () => {
     });
 
     it('should handle filterFiles with undefined options', async () => {
-      await fs.mkdir(path.join(projectRoot, '.git'));
+      vi.mocked(isGitRepository).mockReturnValue(true);
       await createTestFile('.gitignore', 'ignored.txt');
       const service = new FileDiscoveryService(projectRoot);
 
